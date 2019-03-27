@@ -7,6 +7,7 @@
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro_primitives.h>
+#include <algorithm>
 #pragma comment(lib, "winhttp.lib")
 #include "timer.h"
 
@@ -236,7 +237,7 @@ void Init()
 	if (!al_init_primitives_addon())
 		cout << "error : al_primitives_addon()" << endl;
 
-	al_set_window_position(display, 1400, 60);
+	al_set_window_position(display, 1400, 30);
 	al_set_window_title(display, "Genius");
 }
 
@@ -307,9 +308,11 @@ int main()
 					title = wnd_title;
 					disp_win = true;
 					lyrics = GetLyrics(title);
+					int nb_lines = std::count(lyrics.begin(), lyrics.end(), '\n');
 
 					ShowWindow(window, SW_SHOW);
 					SetWindowPos(window, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+					al_resize_display(display, 500, 100 + nb_lines * 24);
 					topmost.start();
 				}
 				else if (string(wnd_title) != last_title && string(wnd_title) == "Spotify")
