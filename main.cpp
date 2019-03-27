@@ -242,6 +242,8 @@ string GetLyrics(string song)
 	if (hRequest) WinHttpCloseHandle(hRequest);
 	if (hConnect) WinHttpCloseHandle(hConnect);
 	if (hSession) WinHttpCloseHandle(hSession);
+
+	if (instrumental) data = "Instru";
 	if (found)
 		return data;
 	else
@@ -313,7 +315,7 @@ int main()
 	ALLEGRO_BITMAP*gbutton = al_load_bitmap("Button.png");
 	bool on_gbutton = false;
 
-	float scroll_y = 0;
+	float scroll_y = 100;
 	bool lclic[2] = { false, false };
 	bool on_app = false;
 	POINT mouse_pos;
@@ -332,7 +334,7 @@ int main()
 			}
 			else
 			{
-				framerate = 30.0;
+				framerate = 10.0;
 				// Event
 				ls = s;
 				if ((GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_F2) & 0x8000))
@@ -342,7 +344,7 @@ int main()
 				else
 					s = false;
 				
-
+				
 				al_get_mouse_state(&mouse);
 				GetCursorPos(&mouse_pos);
 				on_gbutton = false;
@@ -352,8 +354,13 @@ int main()
 				if (mouse_pos.x > win_x && mouse_pos.x < win_x + 500 && mouse_pos.y > win_y && mouse_pos.y < win_y + 100)
 				{
 					topmost.start();
-					al_resize_display(display, 500, win_height);
 					on_app = true;
+					if (win_height != 100 + lyrics_height)
+					{
+						win_height = 100 + lyrics_height;
+						al_resize_display(display, 500, win_height);
+					}
+					
 					if (mouse_pos.x > win_x + 450 && mouse_pos.x < win_x + 482 && mouse_pos.y > win_y + 60 && mouse_pos.y < win_y + 92)
 					{
 						on_gbutton = true;
@@ -361,9 +368,29 @@ int main()
 							OpenBrowser(title);
 					}
 				}
-				if (!on_app)
-					al_resize_display(display, 500, 100);
+				if (lyrics_height == 700) // Scroll
+				{
+					if (mouse.z > 0)
+					{
+						mouse.z = 0;
+						al_set_mouse_z(0);
+					}
+					if (mouse.z < (-lyrics_height + 100) / 100.0)
+					{
+						mouse.z = (-lyrics_height + 100) / 100.0;
+						al_set_mouse_z((-lyrics_height + 100) / 100.0);
+					}
+					scroll_y = -mouse.z * 100;
 
+					if (scroll_y > lyrics_height - 160)
+						scroll_y = lyrics_height - 160;
+				}
+				
+				if (!on_app && win_height != 100)
+				{
+					win_height = 100;
+					al_resize_display(display, 500, 100);
+				}
 				if (wnd_title != nullptr) last_title = wnd_title;
 				GetWindowText(spotify_hwnd, wnd_title, sizeof(wnd_title));
 
@@ -397,22 +424,14 @@ int main()
 					SplitSongArtist(title, artist, song_title);
 					
 
-					win_height = min(160 + nb_lines * 24, 700);
+					lyrics_height = min(70 + nb_lines * 24, 700);
 					ShowWindow(window, SW_SHOW);
 					SetWindowPos(window, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 					if (lyrics == "Lyrics not found") win_height = 100;
-					if (nb_lines == 0)
-					{
-						lyrics = "Instrumental \n";
-						win_height = 160;
-					}
-					cout << lyrics << endl;
-					
+					if (lyrics == "Instru") win_height = 160;
+					scroll_y = 0;
 					topmost.start();
-				}
-				else if (string(wnd_title) != last_title && string(wnd_title) == "Spotify")
-				{
 				}
 
 				// Display
@@ -427,11 +446,11 @@ int main()
 						int i = 0;
 						while ((end_line = lyrics.find("\n", pos)) != -1)
 						{
-							al_draw_text(lfont, al_map_rgb(230, 230, 230), 20, scroll_y + 114 + 24 * i, 0, lyrics.substr(pos, end_line - pos).c_str());
+							al_draw_text(lfont, al_map_rgb(230, 230, 230), 20, -scroll_y + 114 + 24 * i, 0, lyrics.substr(pos, end_line - pos).c_str());
 							pos = end_line + 1;
 							i++;
 						}
-						al_draw_text(lfont, al_map_rgb(230, 230, 230), 20, scroll_y + 114 + 24 * i, 0, lyrics.substr(pos, lyrics.length() - pos).c_str());
+						al_draw_text(lfont, al_map_rgb(230, 230, 230), 20, -scroll_y + 114 + 24 * i, 0, lyrics.substr(pos, lyrics.length() - pos).c_str());
 					}
 					// Header
 					al_draw_filled_rectangle(0, 0, 500, 100, al_map_rgb(40, 40, 40));
@@ -442,10 +461,19 @@ int main()
 					}
 					al_draw_line(20, 101, 480, 101, al_map_rgb(230, 230, 230), 1);
 					al_draw_bitmap_region(gbutton, on_gbutton * 32, 0, 32, 32, 450, 60, 0);
+					if (on_app)
+					{
+						for (int i = 0; i < 10; i++)
+							al_draw_line(0, 102 + i, 500, 102 + i, al_premul_rgba(40, 40, 40, 255 - i * 255 / 10.0), 1);
+					}
 
 					// Footer
-					al_draw_filled_rectangle(0, win_height - 20, 500, win_height, al_map_rgb(40, 40, 40));
-
+					if (on_app)
+					{
+						for (int i = 0; i < 10; i++)
+							al_draw_line(0, win_height - 20 - i, 500, win_height - 20 - i, al_premul_rgba(40, 40, 40, 255 - i * 255 / 10.0), 1);
+						al_draw_filled_rectangle(0, win_height - 20, 500, win_height, al_map_rgb(40, 40, 40));
+					}
 					al_flip_display();
 				}
 			}
