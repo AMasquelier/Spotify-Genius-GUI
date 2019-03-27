@@ -208,7 +208,7 @@ string GetLyrics(string song)
 	int beg = data.find("<div class=\"lyrics\""), end = data.find("</div>", beg);
 	if (beg != -1 && end != -1)
 	{
-		if (data.find("[Instrumental]")) instrumental = true;
+		if (data.find("[Instrumental]") != -1) instrumental = true;
 		data = data.substr(beg, end - beg);
 		// Clean lyrics string
 		int pos = 0;
@@ -243,7 +243,7 @@ string GetLyrics(string song)
 	if (hConnect) WinHttpCloseHandle(hConnect);
 	if (hSession) WinHttpCloseHandle(hSession);
 
-	if (instrumental) data = "Instru";
+	if (instrumental) data = "Instrumental";
 	if (found)
 		return data;
 	else
@@ -321,8 +321,11 @@ int main()
 	POINT mouse_pos;
 	int win_x = 1400, win_y = 30;
 
+	ShowWindow(window, SW_HIDE);
+
 	while (Keep)
 	{
+		Loop_begining:
 		if (framerate_timer.duration() >= 1000000.0 / framerate)
 		{
 			framerate_timer.start();
@@ -351,13 +354,13 @@ int main()
 				on_app = false;
 				lclic[1] = lclic[0];
 				lclic[0] = mouse.buttons & 1;
-				if (mouse_pos.x > win_x && mouse_pos.x < win_x + 500 && mouse_pos.y > win_y && mouse_pos.y < win_y + 100)
+				if (mouse_pos.x > win_x && mouse_pos.x < win_x + 500 && mouse_pos.y > win_y && mouse_pos.y < win_y + win_height)
 				{
 					topmost.start();
 					on_app = true;
-					if (win_height != 100 + lyrics_height)
+					if (win_height != min(800, 100 + lyrics_height))
 					{
-						win_height = 100 + lyrics_height;
+						win_height = min(800, 100 + lyrics_height);
 						al_resize_display(display, 500, win_height);
 					}
 					
@@ -368,22 +371,21 @@ int main()
 							OpenBrowser(title);
 					}
 				}
-				if (lyrics_height == 700) // Scroll
+				if (lyrics_height > 700) // Scroll
 				{
 					if (mouse.z > 0)
 					{
 						mouse.z = 0;
 						al_set_mouse_z(0);
 					}
-					if (mouse.z < (-lyrics_height + 100) / 100.0)
+
+					if (mouse.z < (-lyrics_height + 600) / 100.0)
 					{
-						mouse.z = (-lyrics_height + 100) / 100.0;
-						al_set_mouse_z((-lyrics_height + 100) / 100.0);
+						mouse.z = (-lyrics_height + 600) / 100.0;
+						al_set_mouse_z((-lyrics_height + 600) / 100.0);
 					}
 					scroll_y = -mouse.z * 100;
-
-					if (scroll_y > lyrics_height - 160)
-						scroll_y = lyrics_height - 160;
+					if (scroll_y > lyrics_height - 700) scroll_y = lyrics_height - 700;
 				}
 				
 				if (!on_app && win_height != 100)
@@ -400,8 +402,12 @@ int main()
 					disp_win = false;
 				}
 				if (string(wnd_title).length() == 0) // If spotify is closed
+				{
 					spotify_hwnd = NULL;
-
+					ShowWindow(window, SW_HIDE);
+					disp_win = false;
+					goto Loop_begining;
+				}
 				if (s && !ls && title != "") // If pushed f2
 				{
 					//OpenBrowser(title);
@@ -424,12 +430,11 @@ int main()
 					SplitSongArtist(title, artist, song_title);
 					
 
-					lyrics_height = min(70 + nb_lines * 24, 700);
+					lyrics_height = 70 + nb_lines * 24, 700;
 					ShowWindow(window, SW_SHOW);
 					SetWindowPos(window, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
-					if (lyrics == "Lyrics not found") win_height = 100;
-					if (lyrics == "Instru") win_height = 160;
+					if (lyrics == "Lyrics not found") lyrics_height = 0;
 					scroll_y = 0;
 					topmost.start();
 				}
@@ -468,7 +473,7 @@ int main()
 					}
 
 					// Footer
-					if (on_app)
+					if (on_app && lyrics_height > 0)
 					{
 						for (int i = 0; i < 10; i++)
 							al_draw_line(0, win_height - 20 - i, 500, win_height - 20 - i, al_premul_rgba(40, 40, 40, 255 - i * 255 / 10.0), 1);
