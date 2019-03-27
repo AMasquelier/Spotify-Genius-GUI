@@ -7,6 +7,7 @@
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro_primitives.h>
+#include <allegro5/allegro_image.h>
 #include <algorithm>
 #pragma comment(lib, "winhttp.lib")
 #include "timer.h"
@@ -17,10 +18,20 @@ string GiveUrl(string title)
 {
 	string cmd = "";
 
-	int pos = 0;
+	int pos = 0; // Remove "remastered" stuff
 	if ((pos = title.find("[")) != -1)
 	{
 		int end = title.find("]");
+		if (end != -1)
+			title.erase(title.begin() + pos, title.begin() + end + 1);
+		while (title[pos - 1] == ' ')
+			title.erase(title.begin() + pos - 1);
+	}
+
+	pos = 0; // Remove "feat" stuff
+	if ((pos = title.find("(feat")) != -1)
+	{
+		int end = title.find(")");
 		if (end != -1)
 			title.erase(title.begin() + pos, title.begin() + end + 1);
 		while (title[pos - 1] == ' ')
@@ -41,9 +52,30 @@ string GiveUrl(string title)
 	return cmd + "-lyrics";
 }
 
-string Makecmd(string title)
+void OpenBrowser(string title)
 {
-	return ("start https://genius.com/" + GiveUrl(title));
+	ShellExecute(NULL, "open", ("https://genius.com/" + GiveUrl(title)).c_str(), NULL, NULL, SW_SHOWNORMAL);
+}
+
+void SplitSongArtist(string title, string &artist, string &song)
+{
+	int pos = 0;
+	if ((pos = title.find("[")) != -1)
+	{
+		int end = title.find("]");
+		if (end != -1)
+			title.erase(title.begin() + pos, title.begin() + end + 1);
+		while (title[pos - 1] == ' ')
+			title.erase(title.begin() + pos - 1);
+	}
+
+	int last = title.length();
+	if (title.find(" - ") != title.rfind(" - "))
+		last = title.rfind(" - ");
+	title.erase(title.begin() + last, title.end());
+
+	artist = title.substr(0, title.find(" - "));
+	song = title.substr(title.find(" - ") + 2, title.length() - 1);
 }
 
 HWND spotify_hwnd;
@@ -136,6 +168,7 @@ string GetLyrics(string song)
 		bResults = WinHttpReceiveResponse(hRequest, NULL);
 
 	string data = "";
+	
 	if (bResults)
 	{
 		do
@@ -171,9 +204,11 @@ string GetLyrics(string song)
 	}
 
 	bool found = false;
+	bool instrumental = false;
 	int beg = data.find("<div class=\"lyrics\""), end = data.find("</div>", beg);
 	if (beg != -1 && end != -1)
 	{
+		if (data.find("[Instrumental]")) instrumental = true;
 		data = data.substr(beg, end - beg);
 		// Clean lyrics string
 		int pos = 0;
@@ -226,7 +261,7 @@ void Init()
 		cout << "error : al_init()" << endl;
 
 	al_set_new_display_flags(ALLEGRO_NOFRAME);
-	display = al_create_display(500, 320);
+	display = al_create_display(500, 100);
 	if (!display)
 		cout << "error : display creation" << endl;
 
@@ -236,6 +271,12 @@ void Init()
 
 	if (!al_init_primitives_addon())
 		cout << "error : al_primitives_addon()" << endl;
+
+	if (!al_install_mouse())
+		cout << "error : al_install_mouse()" << endl;
+
+	if (!al_init_image_addon())
+		cout << "error : al_init_image_addon()" << endl;
 
 	al_set_window_position(display, 1400, 30);
 	al_set_window_title(display, "Genius");
@@ -249,6 +290,7 @@ int main()
 	char wnd_title[256];
 	string title, last_title;
 	string lyrics;
+	string song_title, artist;
 	bool ls = false, s = false;
 	bool open_genius = false;
 	bool Keep = true;
@@ -257,12 +299,25 @@ int main()
 	al_clear_to_color(al_map_rgb(255, 0, 0));
 
 	HWND window = al_get_win_window_handle(display);
-	bool disp_win = false;
+	bool disp_win = !already_open;
 	float alpha_channel = 0;
 
 	Clock topmost;
 	ALLEGRO_FONT* tfont = al_load_font("GeosansLight.ttf", 28, 0);
 	ALLEGRO_FONT* lfont = al_load_font("GeosansLight.ttf", 20, 0);
+
+	ALLEGRO_MOUSE_STATE mouse;
+	int win_height = 100, lyrics_height = 0;
+
+
+	ALLEGRO_BITMAP*gbutton = al_load_bitmap("Button.png");
+	bool on_gbutton = false;
+
+	float scroll_y = 0;
+	bool lclic[2] = { false, false };
+	bool on_app = false;
+	POINT mouse_pos;
+	int win_x = 1400, win_y = 30;
 
 	while (Keep)
 	{
@@ -277,7 +332,7 @@ int main()
 			}
 			else
 			{
-				framerate = 20.0;
+				framerate = 30.0;
 				// Event
 				ls = s;
 				if ((GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_F2) & 0x8000))
@@ -286,6 +341,28 @@ int main()
 					s = true;
 				else
 					s = false;
+				
+
+				al_get_mouse_state(&mouse);
+				GetCursorPos(&mouse_pos);
+				on_gbutton = false;
+				on_app = false;
+				lclic[1] = lclic[0];
+				lclic[0] = mouse.buttons & 1;
+				if (mouse_pos.x > win_x && mouse_pos.x < win_x + 500 && mouse_pos.y > win_y && mouse_pos.y < win_y + 100)
+				{
+					topmost.start();
+					al_resize_display(display, 500, win_height);
+					on_app = true;
+					if (mouse_pos.x > win_x + 450 && mouse_pos.x < win_x + 482 && mouse_pos.y > win_y + 60 && mouse_pos.y < win_y + 92)
+					{
+						on_gbutton = true;
+						if(lclic[0] && !lclic[1])
+							OpenBrowser(title);
+					}
+				}
+				if (!on_app)
+					al_resize_display(display, 500, 100);
 
 				if (wnd_title != nullptr) last_title = wnd_title;
 				GetWindowText(spotify_hwnd, wnd_title, sizeof(wnd_title));
@@ -300,19 +377,38 @@ int main()
 
 				if (s && !ls && title != "") // If pushed f2
 				{
-					system(Makecmd(title).c_str());
-					open_genius = false;
+					//OpenBrowser(title);
+					topmost.start();
+					ShowWindow(window, SW_SHOW);
+					SetWindowPos(window, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+					disp_win = true;
 				}
 				if (string(wnd_title) != last_title && string(wnd_title) != "Spotify")
 				{
 					title = wnd_title;
-					disp_win = true;
 					lyrics = GetLyrics(title);
+					
+					title = wnd_title;
+					disp_win = true;
 					int nb_lines = std::count(lyrics.begin(), lyrics.end(), '\n');
+					
+					
 
+					SplitSongArtist(title, artist, song_title);
+					
+
+					win_height = min(160 + nb_lines * 24, 700);
 					ShowWindow(window, SW_SHOW);
 					SetWindowPos(window, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-					al_resize_display(display, 500, 100 + nb_lines * 24);
+
+					if (lyrics == "Lyrics not found") win_height = 100;
+					if (nb_lines == 0)
+					{
+						lyrics = "Instrumental \n";
+						win_height = 160;
+					}
+					cout << lyrics << endl;
+					
 					topmost.start();
 				}
 				else if (string(wnd_title) != last_title && string(wnd_title) == "Spotify")
@@ -320,27 +416,38 @@ int main()
 				}
 
 				// Display
-				al_clear_to_color(al_map_rgba(40, 40, 40, int(alpha_channel)));
+				if (disp_win)
+				{
+					al_clear_to_color(al_map_rgba(40, 40, 40, int(alpha_channel)));
 
-				if (tfont)
-				{
-					al_draw_text(tfont, al_map_rgb(230, 230, 230), 20, 10, 0, title.c_str());
-				}
-				if (disp_win) 
-					al_draw_line(20, 50, 480, 50, al_map_rgb(230, 230, 230), 1);
-				if (lfont)
-				{
-					int pos = 0, end_line = 0;
-					int i = 0;
-					while ((end_line = lyrics.find("\n", pos)) != -1)
+					// Lyrics
+					if (lfont)
 					{
-						al_draw_text(lfont, al_map_rgb(230, 230, 230), 20, 64 + 24 * i, 0, lyrics.substr(pos, end_line - pos).c_str());
-						pos = end_line + 1;
-						i++;
+						int pos = 0, end_line = 0;
+						int i = 0;
+						while ((end_line = lyrics.find("\n", pos)) != -1)
+						{
+							al_draw_text(lfont, al_map_rgb(230, 230, 230), 20, scroll_y + 114 + 24 * i, 0, lyrics.substr(pos, end_line - pos).c_str());
+							pos = end_line + 1;
+							i++;
+						}
+						al_draw_text(lfont, al_map_rgb(230, 230, 230), 20, scroll_y + 114 + 24 * i, 0, lyrics.substr(pos, lyrics.length() - pos).c_str());
 					}
+					// Header
+					al_draw_filled_rectangle(0, 0, 500, 100, al_map_rgb(40, 40, 40));
+					if (tfont)
+					{
+						al_draw_text(tfont, al_map_rgb(230, 230, 230), 20, 20, 0, song_title.c_str());
+						al_draw_text(lfont, al_map_rgb(200, 200, 200), 30, 50, 0, artist.c_str());
+					}
+					al_draw_line(20, 101, 480, 101, al_map_rgb(230, 230, 230), 1);
+					al_draw_bitmap_region(gbutton, on_gbutton * 32, 0, 32, 32, 450, 60, 0);
+
+					// Footer
+					al_draw_filled_rectangle(0, win_height - 20, 500, win_height, al_map_rgb(40, 40, 40));
+
+					al_flip_display();
 				}
-				
-				al_flip_display();
 			}
 			
 		}
