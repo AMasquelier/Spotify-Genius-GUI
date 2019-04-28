@@ -9,6 +9,8 @@
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_image.h>
 #include <algorithm>
+#include <vector>
+
 #pragma comment(lib, "winhttp.lib")
 #include "timer.h"
 
@@ -263,7 +265,7 @@ void Init()
 		cout << "error : al_init()" << endl;
 
 	al_set_new_display_flags(ALLEGRO_NOFRAME);
-	display = al_create_display(500, 100);
+	display = al_create_display(500, 120);
 	if (!display)
 		cout << "error : display creation" << endl;
 
@@ -283,6 +285,14 @@ void Init()
 	al_set_window_position(display, 1400, 30);
 	al_set_window_title(display, "Genius");
 }
+
+typedef struct Color {
+	int r = 0, g = 0, b = 0;
+} Color;
+
+typedef struct Theme {
+	Color background, font;
+} Theme;
 
 int main()
 {
@@ -305,15 +315,39 @@ int main()
 	float alpha_channel = 0;
 
 	Clock topmost;
-	ALLEGRO_FONT* tfont = al_load_font("GeosansLight.ttf", 28, 0);
-	ALLEGRO_FONT* lfont = al_load_font("GeosansLight.ttf", 20, 0);
+	ALLEGRO_FONT* tfont = al_load_font("Roboto-Light.ttf", 28, 0);
+	ALLEGRO_FONT* lfont = al_load_font("Roboto-Light.ttf", 20, 0);
 
 	ALLEGRO_MOUSE_STATE mouse;
-	int win_height = 100, lyrics_height = 0;
+	int win_height = 120, lyrics_height = 0;
 
+
+	vector<Theme> themes;
+	int act_theme = 0;
+	
+	themes.push_back({ { 40, 40, 40 }, { 230, 230, 230 } }); // Dark
+	themes.push_back({ { 240, 240, 240 }, { 20, 20, 20 } }); // Light
+	themes.push_back({ { 40, 45, 60 }, { 240, 220, 80 } }); // Lemonade
+	themes.push_back({ { 20, 25, 35 }, { 215, 170, 190 } }); // Obsidian
+	themes.push_back({ { 34, 34, 51 }, { 170, 204, 255 } }); // Deep blue
+	themes.push_back({ { 45, 47, 51 }, { 230, 230, 230 } }); // Charcoal
+	themes.push_back({ { 150, 64, 60 }, { 230, 230, 230 } }); // Rust
+	themes.push_back({ { 37, 120, 133 }, { 230, 230, 230 } }); // Salted sea
+
+	Color background = themes[act_theme].background;
+	Color font_color = themes[act_theme].font;
 
 	ALLEGRO_BITMAP*gbutton = al_load_bitmap("Button.png");
 	bool on_gbutton = false;
+	ALLEGRO_BITMAP*playbutton = al_load_bitmap("Play.png");
+	bool on_play = false;
+	bool playing = false;
+	ALLEGRO_BITMAP*skipbutton = al_load_bitmap("Skip.png");
+	bool on_skip = false;
+	ALLEGRO_BITMAP*uskipbutton = al_load_bitmap("Uskip.png");
+	bool on_uskip = false;
+	ALLEGRO_BITMAP*themebutton = al_load_bitmap("Theme.png");
+	bool on_theme = false;
 
 	float scroll_y = 100;
 	bool lclic[2] = { false, false };
@@ -351,24 +385,68 @@ int main()
 				al_get_mouse_state(&mouse);
 				GetCursorPos(&mouse_pos);
 				on_gbutton = false;
+				on_play = false;
 				on_app = false;
+				on_skip = false;
+				on_uskip = false;
+				on_theme = false;
 				lclic[1] = lclic[0];
 				lclic[0] = mouse.buttons & 1;
 				if (mouse_pos.x > win_x && mouse_pos.x < win_x + 500 && mouse_pos.y > win_y && mouse_pos.y < win_y + win_height)
 				{
 					topmost.start();
 					on_app = true;
-					if (win_height != min(800, 100 + lyrics_height))
+					if (win_height != min(800, 120 + lyrics_height))
 					{
-						win_height = min(800, 100 + lyrics_height);
+						win_height = min(800, 120 + lyrics_height);
 						al_resize_display(display, 500, win_height);
 					}
 					
-					if (mouse_pos.x > win_x + 450 && mouse_pos.x < win_x + 482 && mouse_pos.y > win_y + 60 && mouse_pos.y < win_y + 92)
+					//gbutton
+					if (mouse_pos.x > win_x + 450 && mouse_pos.x < win_x + 482 && mouse_pos.y > win_y + 80 && mouse_pos.y < win_y + 112)
 					{
 						on_gbutton = true;
 						if(lclic[0] && !lclic[1])
 							OpenBrowser(title);
+					}
+					//playbutton
+					if (mouse_pos.x > win_x + 56 && mouse_pos.x < win_x + 88 && mouse_pos.y > win_y + 80 && mouse_pos.y < win_y + 112)
+					{
+						on_play = true;
+						if (lclic[0] && !lclic[1])
+						{
+							keybd_event(VK_MEDIA_PLAY_PAUSE, 0, 0, 0);
+						}
+					}
+					//skipbutton
+					if (mouse_pos.x > win_x + 96 && mouse_pos.x < win_x + 120 && mouse_pos.y > win_y + 88 && mouse_pos.y < win_y + 112)
+					{
+						on_skip = true;
+						if (lclic[0] && !lclic[1])
+						{
+							keybd_event(VK_MEDIA_NEXT_TRACK, 0, 0, 0);
+						}
+					}
+					//uskipbutton
+					if (mouse_pos.x > win_x + 30 && mouse_pos.x < win_x + 54 && mouse_pos.y > win_y + 88 && mouse_pos.y < win_y + 112)
+					{
+						on_uskip = true;
+						if (lclic[0] && !lclic[1])
+						{
+							keybd_event(VK_MEDIA_PREV_TRACK, 0, 0, 0);
+						}
+					}
+					//uskipbutton
+					if (mouse_pos.x > win_x + 400 && mouse_pos.x < win_x + 432 && mouse_pos.y > win_y + 80 && mouse_pos.y < win_y + 112)
+					{
+						on_theme = true;
+						if (lclic[0] && !lclic[1])
+						{
+							act_theme++;
+							act_theme %= themes.size();
+							background = themes[act_theme].background;
+							font_color = themes[act_theme].font;
+						}
 					}
 				}
 				if (lyrics_height > 700) // Scroll
@@ -379,21 +457,21 @@ int main()
 						al_set_mouse_z(0);
 					}
 
-					if (mouse.z < (-lyrics_height + 600) / 100.0)
+					if (mouse.z < (-lyrics_height + 580) / 100.0)
 					{
-						mouse.z = (-lyrics_height + 600) / 100.0;
-						al_set_mouse_z((-lyrics_height + 600) / 100.0);
+						mouse.z = (-lyrics_height + 580) / 100.0;
+						al_set_mouse_z((-lyrics_height + 580) / 100.0);
 					}
 					scroll_y = -mouse.z * 100;
-					if (scroll_y > lyrics_height - 700) scroll_y = lyrics_height - 700;
+					if (scroll_y > lyrics_height - 680) scroll_y = lyrics_height - 680;
 				}
 				
-				if (!on_app && win_height != 100)
+				if (!on_app && win_height != 120)
 				{
-					win_height = 100;
-					al_resize_display(display, 500, 100);
+					win_height = 120;
+					al_resize_display(display, 500, 120);
 				}
-				if (wnd_title != nullptr) last_title = wnd_title;
+				
 				GetWindowText(spotify_hwnd, wnd_title, sizeof(wnd_title));
 
 				if (topmost.duration() > 3000000 && disp_win) // Only display 3s
@@ -416,11 +494,19 @@ int main()
 					SetWindowPos(window, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 					disp_win = true;
 				}
-				if (string(wnd_title) != last_title && string(wnd_title) != "Spotify")
+				// Detect if it's paused or playing
+				if (string(wnd_title) == "Spotify" || string(wnd_title) == "Spotify Premium")
+				{
+					playing = false;
+				}
+				else playing = true;
+
+				if (string(wnd_title) != last_title && string(wnd_title) != "Spotify" && string(wnd_title) != "Spotify Premium")
 				{
 					title = wnd_title;
 					lyrics = GetLyrics(title);
 					
+					last_title = wnd_title;
 					title = wnd_title;
 					disp_win = true;
 					int nb_lines = std::count(lyrics.begin(), lyrics.end(), '\n');
@@ -436,13 +522,15 @@ int main()
 
 					if (lyrics == "Lyrics not found") lyrics_height = 0;
 					scroll_y = 0;
+					mouse.z = 0;
+					al_set_mouse_z(0);
 					topmost.start();
 				}
 
 				// Display
 				if (disp_win)
 				{
-					al_clear_to_color(al_map_rgba(40, 40, 40, int(alpha_channel)));
+					al_clear_to_color(al_map_rgba(background.r, background.g, background.b, int(alpha_channel)));
 
 					// Lyrics
 					if (lfont)
@@ -451,33 +539,40 @@ int main()
 						int i = 0;
 						while ((end_line = lyrics.find("\n", pos)) != -1)
 						{
-							al_draw_text(lfont, al_map_rgb(230, 230, 230), 20, -scroll_y + 114 + 24 * i, 0, lyrics.substr(pos, end_line - pos).c_str());
+							al_draw_text(lfont, al_map_rgb(font_color.r, font_color.g, font_color.b), 20, -scroll_y + 134 + 24 * i, 0, lyrics.substr(pos, end_line - pos).c_str());
 							pos = end_line + 1;
 							i++;
 						}
-						al_draw_text(lfont, al_map_rgb(230, 230, 230), 20, -scroll_y + 114 + 24 * i, 0, lyrics.substr(pos, lyrics.length() - pos).c_str());
+						al_draw_text(lfont, al_map_rgb(font_color.r, font_color.g, font_color.b), 20, -scroll_y + 134 + 24 * i, 0, lyrics.substr(pos, lyrics.length() - pos).c_str());
 					}
 					// Header
-					al_draw_filled_rectangle(0, 0, 500, 100, al_map_rgb(40, 40, 40));
+					al_draw_filled_rectangle(0, 0, 500, 120, al_map_rgb(background.r, background.g, background.b));
 					if (tfont)
 					{
-						al_draw_text(tfont, al_map_rgb(230, 230, 230), 20, 20, 0, song_title.c_str());
-						al_draw_text(lfont, al_map_rgb(200, 200, 200), 30, 50, 0, artist.c_str());
+						al_draw_text(tfont, al_map_rgb(font_color.r, font_color.g, font_color.b), 20, 20, 0, song_title.c_str());
+						al_draw_text(lfont, al_map_rgb(font_color.r, font_color.g, font_color.b), 30, 50, 0, artist.c_str());
 					}
-					al_draw_line(20, 101, 480, 101, al_map_rgb(230, 230, 230), 1);
-					al_draw_bitmap_region(gbutton, on_gbutton * 32, 0, 32, 32, 450, 60, 0);
+					al_draw_line(20, 121, 480, 121, al_map_rgb(font_color.r, font_color.g, font_color.b), 1);
+					
+					// Buttons
+					if(on_gbutton) al_draw_bitmap_region(gbutton, on_gbutton * 32, 0, 32, 32, 450, 80, 0);
+					else		   al_draw_tinted_bitmap_region(gbutton, al_premul_rgba(font_color.r, font_color.g, font_color.b, 255), on_gbutton * 32, 0, 32, 32, 450, 80, 0);
+					al_draw_tinted_bitmap_region(playbutton, al_premul_rgba(font_color.r, font_color.g, font_color.b, 255), playing * 64 + on_play * 32, 0, 32, 32, 56, 80, 0);
+					al_draw_tinted_bitmap_region(skipbutton, al_premul_rgba(font_color.r, font_color.g, font_color.b, 255), on_skip * 24, 0, 24, 24, 96, 88, 0);
+					al_draw_tinted_bitmap_region(uskipbutton, al_premul_rgba(font_color.r, font_color.g, font_color.b, 255), on_uskip * 24, 0, 24, 30, 24, 88, 0);
+					al_draw_tinted_bitmap_region(themebutton, al_premul_rgba(font_color.r, font_color.g, font_color.b, 255),  on_theme * 24, 0, 24, 24, 408, 86, 0);
 					if (on_app)
 					{
 						for (int i = 0; i < 10; i++)
-							al_draw_line(0, 102 + i, 500, 102 + i, al_premul_rgba(40, 40, 40, 255 - i * 255 / 10.0), 1);
+							al_draw_line(0, 122 + i, 500, 122 + i, al_premul_rgba(background.r, background.g, background.b, 255 - i * 255 / 10.0), 1);
 					}
 
 					// Footer
 					if (on_app && lyrics_height > 0)
 					{
 						for (int i = 0; i < 10; i++)
-							al_draw_line(0, win_height - 20 - i, 500, win_height - 20 - i, al_premul_rgba(40, 40, 40, 255 - i * 255 / 10.0), 1);
-						al_draw_filled_rectangle(0, win_height - 20, 500, win_height, al_map_rgb(40, 40, 40));
+							al_draw_line(0, win_height - 20 - i, 500, win_height - 20 - i, al_premul_rgba(background.r, background.g, background.b, 255 - i * 255 / 10.0), 1);
+						al_draw_filled_rectangle(0, win_height - 20, 500, win_height, al_map_rgb(background.r, background.g, background.b));
 					}
 					al_flip_display();
 				}
