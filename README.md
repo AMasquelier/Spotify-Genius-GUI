@@ -8,11 +8,14 @@
 ##### If you want to see lyrics and the window is in background task just press f2 and the window will come back in foreground.
 ##### If you want to close the process just press Ctrl+f2.
 
+## Update version 1.1 :
+##### Added media control buttons
+##### Added color themes
+![alt text][Colors]
+
+[Colors]: readme/anycoloryoulike.png "Colors"
+
 
 ![alt text][Demo]
 
 [Demo]: Gif36.gif "Demo"
-
-![alt text][Colors]
-
-[Colors]: readme/anycoloryoulike.png "Colors"
