@@ -14,7 +14,10 @@
 ![alt text][Colors]
 
 [Colors]: readme/anycoloryoulike1.png "Colors"
+##### Added covers
+![alt text][Cover]
 
+[Cover]: readme/cover_rm.png "Cover"
 
 ![alt text][Demo]
 
