@@ -13,7 +13,7 @@
 ##### Added color themes
 ![alt text][Colors]
 
-[Colors]: readme/anycoloryoulike2.png "Colors"
+[Colors]: readme/anycoloryoulike1.png "Colors"
 
 
 ![alt text][Demo]
