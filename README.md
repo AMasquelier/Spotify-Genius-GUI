@@ -22,8 +22,13 @@
 
 ### Update version 1.2 :
 ##### Adaptative colors
-[Adaptative]: readme/Adaptative.png "Colors"
-[Adaptative2]: readme/Adaptative2.png "Colors"
+![alt text][Adaptative]
+
+[Adaptative]: readme/Adaptative.png "Adaptative"
+
+![alt text][Adaptative2]
+
+[Adaptative2]: readme/Adaptative2.png "Adaptative2"
 
 ![alt text][Demo]
 
