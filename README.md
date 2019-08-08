@@ -22,3 +22,8 @@
 ![alt text][Demo]
 
 [Demo]: Gif36.gif "Demo"
+
+### Update version 1.2 :
+##### Adaptative colors
+[Adaptative]: readme/Adaptative.png "Colors"
+[Adaptative2]: readme/Adaptative2.png "Colors"
