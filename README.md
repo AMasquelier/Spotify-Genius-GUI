@@ -7,7 +7,10 @@
 ##### If you don't hover until 3 seconds the window will go back in background task.
 ##### If you want to see lyrics and the window is in background task just press f2 and the window will come back in foreground.
 ##### If you want to close the process just press Ctrl+f2.
+![alt text][DL]
+[DL]: readme/dl.png "Download"
 
+https://github.com/AMasquelier/Spotify-Genius-GUI/raw/master/Spotify-Genius-v1.2.zip
 ### Update version 1.1 :
 ##### Added media control buttons
 ##### Added color themes
