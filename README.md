@@ -13,12 +13,12 @@
 
 
 ### Update version 1.1 :
-##### Added media control buttons
-##### Added color themes
+##### Media control buttons
+##### Color themes
 ![alt text][Colors]
 
 [Colors]: readme/anycoloryoulike1.png "Colors"
-##### Added covers
+##### Covers
 ![alt text][Cover]
 
 [Cover]: readme/cover_rm.png "Cover"
