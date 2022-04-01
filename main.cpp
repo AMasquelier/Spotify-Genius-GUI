@@ -2,6 +2,7 @@
 
 #pragma comment(lib, "winhttp.lib")
 #include "timer.h"
+#include "math.h"
 
 ALLEGRO_DISPLAY *display;
 void Exit()
@@ -11,6 +12,7 @@ void Exit()
 
 void Init()
 {
+
 	if (!al_init())
 		cout << "error : al_init()" << endl;
 
@@ -36,6 +38,17 @@ void Init()
 
 	al_set_window_position(display, 1400, 30);
 	al_set_window_title(display, "Genius");
+
+	HWND winhandle;
+	HICON icon;
+
+	icon = LoadIcon(GetModuleHandle(NULL), L"MAINICON");
+	if (icon) {
+			
+		winhandle = al_get_win_window_handle(display);
+		SetClassLongPtr(winhandle, GCLP_HICON, (LONG_PTR)icon);
+		SetClassLongPtr(winhandle, GCLP_HICONSM, (LONG_PTR)icon);
+	}
 }
 
 HWND spotify_hwnd;
@@ -49,9 +62,10 @@ int main()
 	string title, last_title;
 	string lyrics;
 	string song_title, artist;
-	bool ls = false, s = false;
+	bool ls = false, s = false, shift = false;
 	bool open_genius = false;
 	bool Keep = true;
+	float mzx = 0, mzy = 0;
 
 	Init();
 	al_clear_to_color(al_map_rgb(255, 0, 0));
@@ -66,7 +80,7 @@ int main()
 	ALLEGRO_FONT* lfont = al_load_font("Roboto-Light.ttf", 20, 0);
 
 	ALLEGRO_MOUSE_STATE mouse;
-	int win_height = 120, lyrics_height = 0;
+	int win_height = 120, lyrics_height = 0, lyrics_width = 0;
 
 
 	vector<Theme> themes;
@@ -102,7 +116,7 @@ int main()
 
 	ALLEGRO_BITMAP*cover = al_load_bitmap("cover.png");
 
-	float scroll_y = 100;
+	float scroll_x = 0, scroll_y = 100;
 	bool lclic[2] = { false, false };
 	bool on_app = false;
 	POINT mouse_pos;
@@ -131,11 +145,10 @@ int main()
 				ls = s;
 				if ((GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_F2) & 0x8000))
 					Keep = false;
-				else if (GetKeyState(VK_F2) & 0x8000)
-					s = true;
-				else
-					s = false;
-				
+				else s = (GetKeyState(VK_F2) & 0x8000);
+
+				shift = (GetKeyState(VK_SHIFT) & 0x8000);
+
 				if (cover) x_shift = 105;
 				else x_shift = 0;
 
@@ -220,22 +233,27 @@ int main()
 						}
 					}
 				}
-				if (lyrics_height > 700) // Scroll
+				if (lyrics_height > 690) // Scroll
 				{
-					if (mouse.z > 0)
-					{
-						mouse.z = 0;
-						al_set_mouse_z(0);
-					}
+					mzy += mouse.z*100;
+					mzy = fmin(0, mzy);
+					mzy = fmax(-lyrics_height + 580, mzy);
 
-					if (mouse.z < (-lyrics_height + 580) / 100.0)
-					{
-						mouse.z = (-lyrics_height + 580) / 100.0;
-						al_set_mouse_z((-lyrics_height + 580) / 100.0);
-					}
-					scroll_y = -mouse.z * 100;
+					scroll_y = -mzy;
 					if (scroll_y > lyrics_height - 680) scroll_y = lyrics_height - 680;
+					
 				}
+				if (shift && lyrics_width > 500) {
+					mzx += mouse.z * 100;
+					mzx = fmin(0, mzx);
+					mzx = fmax(-lyrics_width + 500, mzx);
+					scroll_x = -mzx;
+
+					if (scroll_x > lyrics_width - 500) scroll_x = lyrics_width - 500;
+				}
+				mouse.z = 0;
+				al_set_mouse_z(0);
+
 				
 				if (!on_app && win_height != 120)
 				{
@@ -288,6 +306,18 @@ int main()
 					
 
 					lyrics_height = 70 + nb_lines * 24, 700;
+
+					int pos = 0, end_line = 0;
+					int i = 0, m = 0;
+
+					while ((end_line = lyrics.find("\n", pos)) != -1)
+					{
+						m = max(m, lyrics.substr(pos, end_line - pos).size());
+						pos = end_line + 1;
+					}
+					lyrics_width = max(500, m * 10);
+					cout << lyrics_width << endl;
+
 					ShowWindow(window, SW_SHOW);
 					SetWindowPos(window, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
@@ -336,13 +366,15 @@ int main()
 					{
 						int pos = 0, end_line = 0;
 						int i = 0;
+						
 						while ((end_line = lyrics.find("\n", pos)) != -1)
 						{
-							al_draw_text(lfont, al_map_rgb(font_color.r, font_color.g, font_color.b), 20, -scroll_y + 134 + 24 * i, 0, lyrics.substr(pos, end_line - pos).c_str());
+							
+							al_draw_text(lfont, al_map_rgb(font_color.r, font_color.g, font_color.b), 20 - scroll_x, -scroll_y + 134 + 24 * i, 0, lyrics.substr(pos, end_line - pos).c_str());
 							pos = end_line + 1;
 							i++;
 						}
-						al_draw_text(lfont, al_map_rgb(font_color.r, font_color.g, font_color.b), 20, -scroll_y + 134 + 24 * i, 0, lyrics.substr(pos, lyrics.length() - pos).c_str());
+						al_draw_text(lfont, al_map_rgb(font_color.r, font_color.g, font_color.b), 20- scroll_x, -scroll_y + 134 + 24 * i, 0, lyrics.substr(pos, lyrics.length() - pos).c_str());
 					}
 					// Header
 					al_draw_filled_rectangle(0, 0, 500, 120, al_map_rgb(background.r, background.g, background.b));
@@ -378,6 +410,17 @@ int main()
 					{
 						for (int i = 0; i < 10; i++)
 							al_draw_line(0, 122 + i, 500, 122 + i, al_premul_rgba(background.r, background.g, background.b, 255 - i * 255 / 10.0), 1);
+					}
+
+					// Side
+					if (on_app && lyrics_height > 0)
+					{
+						for (int i = 0; i < 20; i++)
+							al_draw_line(0 + i, 121, 0 + i, win_height, al_premul_rgba(background.r, background.g, background.b, 255 - i * 255 / 20.0), 1);
+
+						for (int i = 0; i < 20; i++)
+							al_draw_line(500 - i, 121, 500 - i, win_height, al_premul_rgba(background.r, background.g, background.b, 255 - i * 255 / 20.0), 1);
+						al_draw_filled_rectangle(0, win_height - 20, 500, win_height, al_map_rgb(background.r, background.g, background.b));
 					}
 
 					// Footer

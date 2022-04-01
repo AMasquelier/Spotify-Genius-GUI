@@ -189,6 +189,7 @@ string GetLyrics(string song)
 		} while (dwSize > 0);
 	}
 
+
 	// Find cover
 	int beg = data.find("<meta content=\"https://images.genius.com/"), end = data.find("\" property=\"og:image\" />", beg);
 	if (beg != -1 && end != -1)
@@ -220,7 +221,8 @@ string GetLyrics(string song)
 
 	bool found = false;
 	bool instrumental = false;
-	beg = data.find("<div class=\"lyrics\""); end = data.find("</div>", beg);
+	beg = data.find("<div data-lyrics-container="); end = data.find("</div>", beg);
+
 	if (beg != -1 && end != -1)
 	{
 		if (data.find("[Instrumental]") != -1) instrumental = true;
@@ -229,7 +231,25 @@ string GetLyrics(string song)
 		int pos = 0;
 		while ((pos = data.find("<", pos)) != -1)
 		{
+			if (data.find("br/>", pos) == pos + 1) {
+				data.insert(pos, "\n");
+				pos+=1;
+			}
 			data.erase(data.begin() + pos, data.begin() + data.find(">", pos) + 1);
+		}
+		pos = 0;
+		while ((pos = data.find("&#x27", pos)) != -1)
+		{
+			data.erase(data.begin() + pos, data.begin() + data.find(";", pos) + 1);
+			data.insert(pos, "'");
+			pos += 1;
+		}
+		pos = 0;
+		while ((pos = data.find("&quot", pos)) != -1)
+		{
+			data.erase(data.begin() + pos, data.begin() + data.find(";", pos) + 1);
+			data.insert(pos, "'");
+			pos += 1;
 		}
 		pos = 0;
 		while ((pos = data.find("[", pos)) != -1)
