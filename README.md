@@ -8,7 +8,7 @@
 ##### If you want to see lyrics and the window is in background task just press f2 and the window will come back in foreground.
 ##### If you want to close the process just press Ctrl+f2.
 
-[![Download](readme/dl.png?raw=true "Download")](https://github.com/AMasquelier/Spotify-Genius-GUI/raw/master/Spotify-Genius-v1.2.zip)
+[![Download](readme/dl.png?raw=true "Download")](https://github.com/AMasquelier/Spotify-Genius-GUI/raw/master/V3.zip)
 
 
 
